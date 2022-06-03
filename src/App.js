@@ -7,6 +7,7 @@ import {
   ResultContainer,
   ResultURL,
   ButtonContainer,
+  FooterContainer,
 } from "./Style";
 import { APIKEY } from "./api/api"; //set APIKEY
 import Snackbar from "@mui/material/Snackbar";
@@ -104,8 +105,8 @@ function App() {
               </Typography>
             </ResultURL>
             <ButtonContainer>
-              <IconButton>
-                <ContentCopyIcon onClick={handleCopy} />
+              <IconButton onClick={handleCopy}>
+                <ContentCopyIcon />
               </IconButton>
 
               <IconButton>
@@ -125,6 +126,16 @@ function App() {
           onClose={handleSnackbarClose}
           message="The shortened URL has been copied to your clipboard"
         />
+        <FooterContainer>
+          <Typography sx={{ fontFamily: "Roboto Mono" }}>
+            <a
+              href="https://github.com/LeeCH-OeO/short-url"
+              style={{ textDecoration: "none" }}
+            >
+              © 2022 ChiHsuan-Lee
+            </a>
+          </Typography>
+        </FooterContainer>
       </div>
     </MainContainer>
   );

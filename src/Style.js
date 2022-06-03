@@ -28,10 +28,18 @@ export const ResultURL = styled.div`
   border: 1px solid;
   border-color: #696969;
   background-color: gray;
-  padding: 0.2rem; ;
+  padding: 0.2rem;
 `;
 export const ButtonContainer = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+`;
+export const FooterContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0.5;
+  text-decoration: none;
+  margin-top: 2rem;
 `;
