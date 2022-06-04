@@ -43,3 +43,12 @@ export const FooterContainer = styled.div`
   text-decoration: none;
   margin-top: 2rem;
 `;
+export const LineImgContainer = styled.a`
+  border-radius: 50%;
+  padding: 8px;
+
+  &:hover {
+    background-color: #f5f5f5;
+    cursor: pointer;
+  }
+`;

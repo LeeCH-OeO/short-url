@@ -8,11 +8,15 @@ import {
   ResultURL,
   ButtonContainer,
   FooterContainer,
+  LineImgContainer,
 } from "./Style";
 import { APIKEY } from "./api/api"; //set APIKEY
 import Snackbar from "@mui/material/Snackbar";
 import TwitterIcon from "@mui/icons-material/Twitter";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import LineImage from "./LineIcon.png";
+
+import { MdFacebook } from "react-icons/md";
 
 function App() {
   const [OriginalUrl, setOriginalUrl] = useState("");
@@ -115,6 +119,24 @@ function App() {
                   href={`https://twitter.com/intent/tweet?text=https://${ShortenURL}`}
                 >
                   <TwitterIcon />
+                </a>
+              </IconButton>
+              <LineImgContainer
+                href={`https://social-plugins.line.me/lineit/share?url=https://${ShortenURL}`}
+              >
+                <img
+                  src={LineImage}
+                  width="25"
+                  height="25"
+                  alt="share to Line"
+                />
+              </LineImgContainer>
+              <IconButton>
+                <a
+                  style={{ textDecoration: "none", color: "gray" }}
+                  href={`https://www.facebook.com/sharer/sharer.php?u=https://${ShortenURL}`}
+                >
+                  <MdFacebook size="2rem" />
                 </a>
               </IconButton>
             </ButtonContainer>
