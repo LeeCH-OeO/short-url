@@ -10,7 +10,7 @@ import {
   FooterContainer,
   LineImgContainer,
 } from "./Style";
-import { APIKEY } from "./api/api"; //set APIKEY
+import {APIKEY} from './api/api.js' //set APIKEY
 import Snackbar from "@mui/material/Snackbar";
 import TwitterIcon from "@mui/icons-material/Twitter";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
@@ -154,7 +154,7 @@ function App() {
               href="https://github.com/LeeCH-OeO/short-url"
               style={{ textDecoration: "none" }}
             >
-              © 2022 ChiHsuan-Lee
+              © 2022 Chi-Hsuan Lee
             </a>
           </Typography>
         </FooterContainer>
