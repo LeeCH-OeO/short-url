@@ -10,7 +10,7 @@ import {
   FooterContainer,
   LineImgContainer,
 } from "./Style";
-import {APIKEY} from './api/api.js' //set APIKEY
+import { APIKEY } from "./api/api.js"; //set APIKEY
 import Snackbar from "@mui/material/Snackbar";
 import TwitterIcon from "@mui/icons-material/Twitter";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
@@ -73,7 +73,7 @@ function App() {
       <div>
         <Header>
           <Typography variant="h2" sx={{ fontWeight: "bold" }}>
-            Short url
+            Short URL
           </Typography>
         </Header>
         <InputContainer>
