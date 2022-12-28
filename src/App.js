@@ -10,7 +10,6 @@ import {
   FooterContainer,
   LineImgContainer,
 } from "./Style";
-import { APIKEY } from "./api/api.js"; //set APIKEY
 import Snackbar from "@mui/material/Snackbar";
 import TwitterIcon from "@mui/icons-material/Twitter";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
@@ -37,7 +36,7 @@ function App() {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        apikey: APIKEY,
+        apikey: process.env.REACT_APP_API_KEY,
       },
       body: JSON.stringify({
         destination: Url,
