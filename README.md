@@ -8,7 +8,7 @@ Make your URL short !
 
 ## dev
 
-Place your Rebrandly api under `src/api/ApiKey`  
+Place your Rebrandly api in `/.env`  
 `npm start`
 
 ## API
