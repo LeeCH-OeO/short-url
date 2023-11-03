@@ -14,7 +14,7 @@ import Snackbar from "@mui/material/Snackbar";
 import TwitterIcon from "@mui/icons-material/Twitter";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import LineImage from "./LineIcon.png";
-
+import axios from "axios";
 import { MdFacebook } from "react-icons/md";
 
 function App() {
@@ -22,6 +22,7 @@ function App() {
   const [ShortenURL, setShortenURL] = useState("");
   const [Shorten, setShorten] = useState(false);
   const [isSnackbar, setSnackbar] = useState(false);
+  const domainUrl = "https://shorturl-404016.oa.r.appspot.com/";
   const handleClick = async () => {
     if (OriginalUrl === "") {
       alert("請輸入");
@@ -31,37 +32,26 @@ function App() {
     FetchURL(OriginalUrl);
   };
   const FetchURL = async (Url) => {
-    const options = {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        apikey: process.env.REACT_APP_API_KEY,
-      },
-      body: JSON.stringify({
-        destination: Url,
-        domain: { fullName: "st.chihsuan-lee.dev" },
-      }),
-    };
-
-    await fetch("https://api.rebrandly.com/v1/links", options)
-      .then((response) => response.json())
-      .then((response) => {
-        if (response.shortUrl) {
-          setShortenURL(response.shortUrl);
-          setShorten(true);
-          clearInput();
-        } else {
-          alert("Invalid format");
-          clearInput();
-        }
+    try {
+      const res = await axios({
+        method: "post",
+        url: "https://shorturl-404016.oa.r.appspot.com/api/short",
+        data: { url: Url },
+        headers: { "Content-Type": "application/json" },
       });
+      console.log(res.data.id);
+      setShortenURL(domainUrl + res.data.id);
+      setShorten(true);
+      clearInput();
+    } catch (error) {
+      console.log(error);
+    }
   };
   const clearInput = () => {
     setOriginalUrl("");
   };
   const handleCopy = () => {
-    navigator.clipboard.writeText("https://" + ShortenURL);
+    navigator.clipboard.writeText(ShortenURL);
     setSnackbar(true);
   };
   const handleSnackbarClose = () => {
@@ -100,7 +90,7 @@ function App() {
                 sx={{ fontFamily: "Roboto Mono" }}
               >
                 <a
-                  href={`https://${ShortenURL}`}
+                  href={`${ShortenURL}`}
                   style={{ textDecoration: "none", color: "black" }}
                 >
                   {ShortenURL}
@@ -115,13 +105,13 @@ function App() {
               <IconButton>
                 <a
                   style={{ textDecoration: "none", color: "gray" }}
-                  href={`https://twitter.com/intent/tweet?text=https://${ShortenURL}`}
+                  href={`https://twitter.com/intent/tweet?text=${ShortenURL}`}
                 >
                   <TwitterIcon />
                 </a>
               </IconButton>
               <LineImgContainer
-                href={`https://social-plugins.line.me/lineit/share?url=https://${ShortenURL}`}
+                href={`https://social-plugins.line.me/lineit/share?url=${ShortenURL}`}
               >
                 <img
                   src={LineImage}
@@ -133,7 +123,7 @@ function App() {
               <IconButton>
                 <a
                   style={{ textDecoration: "none", color: "gray" }}
-                  href={`https://www.facebook.com/sharer/sharer.php?u=https://${ShortenURL}`}
+                  href={`https://www.facebook.com/sharer/sharer.php?u=${ShortenURL}`}
                 >
                   <MdFacebook size="2rem" />
                 </a>
