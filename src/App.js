@@ -22,7 +22,7 @@ function App() {
   const [ShortenURL, setShortenURL] = useState("");
   const [Shorten, setShorten] = useState(false);
   const [isSnackbar, setSnackbar] = useState(false);
-  const domainUrl = "https://shorturl-404016.oa.r.appspot.com/";
+  const domainUrl = "https://st.ch-lee.xyz/";
   const handleClick = async () => {
     if (OriginalUrl === "") {
       alert("請輸入");
@@ -35,7 +35,7 @@ function App() {
     try {
       const res = await axios({
         method: "post",
-        url: "https://shorturl-404016.oa.r.appspot.com/api/short",
+        url: "https://st.ch-lee.xyz/api/short",
         data: { url: Url },
         headers: { "Content-Type": "application/json" },
       });
