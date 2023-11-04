@@ -1,33 +1,48 @@
-import styled from "styled-components";
+import styled, { createGlobalStyle } from "styled-components";
 
 export const MainContainer = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 80vh;
+  height: 100vh;
+  flex-direction: column;
 `;
-export const Header = styled.div`
+export const InnerContainer = styled.div`
+  background-color: #f7f2f9;
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 1rem;
+  border-radius: 20px;
+  height: 60%;
+  width: 60vw;
+  @media (max-width: 600px) {
+    width: 70vw;
+  }
+`;
+export const Header = styled.div`
+  width: 50vw;
+  display: flex;
   justify-content: center;
 `;
 export const InputContainer = styled.div`
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 90vw;
+  justify-content: space-between;
+  width: 50vw;
+  flex-direction: column;
 `;
+
 export const ResultContainer = styled.div`
   margin-top: 1vh;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: 90vw;
+  flex-direction: column;
+  width: 50vw;
 `;
 export const ResultURL = styled.div`
-  border: 1px solid;
-  border-color: #696969;
-  background-color: gray;
   padding: 0.2rem;
 `;
 export const ButtonContainer = styled.div`
@@ -41,14 +56,14 @@ export const FooterContainer = styled.div`
   align-items: center;
   opacity: 0.5;
   text-decoration: none;
-  margin-top: 2rem;
 `;
 export const LineImgContainer = styled.a`
   border-radius: 50%;
   padding: 8px;
-
-  &:hover {
-    background-color: #f5f5f5;
-    cursor: pointer;
+`;
+export const GlobalStyle = createGlobalStyle`
+  body, html {
+    background-color: #fffbfe;
+    font-family: 'Noto Sans', sans-serif;
   }
 `;

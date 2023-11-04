@@ -9,11 +9,16 @@ import {
   ButtonContainer,
   FooterContainer,
   LineImgContainer,
+  GlobalStyle,
+  ShortButton,
+  InnerContainer,
 } from "./Style";
 import Snackbar from "@mui/material/Snackbar";
-import TwitterIcon from "@mui/icons-material/Twitter";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import LineImage from "./LineIcon.png";
+import TwitterIcon from "./icons/twitter.svg";
+import FBIcon from "./icons/facebook.svg";
+import CopyIcon from "./icons/copy.svg";
+import TelegramIcon from "./icons/telegram.svg";
 import axios from "axios";
 import { MdFacebook } from "react-icons/md";
 
@@ -53,102 +58,134 @@ function App() {
   const handleCopy = () => {
     navigator.clipboard.writeText(ShortenURL);
     setSnackbar(true);
+    console.log("click");
   };
   const handleSnackbarClose = () => {
     setSnackbar(false);
   };
   return (
-    <MainContainer>
-      <div>
-        <Header>
-          <Typography variant="h2" sx={{ fontWeight: "bold" }}>
-            Short URL
-          </Typography>
-        </Header>
-        <InputContainer>
-          <TextField
-            label="Original URL"
-            variant="standard"
-            fullWidth
-            onChange={(e) => {
-              setOriginalUrl(e.target.value);
-            }}
-          />
-          <Button
-            variant="contained"
+    <div>
+      <GlobalStyle />
+
+      <MainContainer>
+        <InnerContainer>
+          <Header>
+            <p
+              style={{
+                textDecoration: "none",
+
+                fontWeight: "bolder",
+                fontSize: "2rem",
+              }}
+            >
+              Short URL
+            </p>
+          </Header>
+          <InputContainer>
+            <TextField
+              label="Original URL"
+              variant="standard"
+              fullWidth
+              onChange={(e) => {
+                setOriginalUrl(e.target.value);
+              }}
+            />
+            <div style={{ display: "inline-block", paddingTop: "1rem" }}>
+              <Button
+                variant="contained"
+                onClick={handleClick}
+                size="large"
+                disabled={OriginalUrl ? false : true}
+              >
+                shorten
+              </Button>
+            </div>
+            {/* <ShortButton
             onClick={handleClick}
             disabled={OriginalUrl ? false : true}
           >
             shorten
-          </Button>
-        </InputContainer>
-        {Shorten && ShortenURL && (
-          <ResultContainer>
-            <ResultURL>
-              <Typography
-                variant="subtitle2"
-                sx={{ fontFamily: "Roboto Mono" }}
-              >
+          </ShortButton> */}
+          </InputContainer>
+          {Shorten && ShortenURL && (
+            <ResultContainer>
+              <ResultURL>
                 <a
                   href={`${ShortenURL}`}
-                  style={{ textDecoration: "none", color: "black" }}
+                  style={{
+                    textDecoration: "none",
+                    color: "rgb(25, 118, 210)",
+                    fontWeight: "bold",
+                    fontSize: "1.2rem",
+                  }}
                 >
                   {ShortenURL}
                 </a>
-              </Typography>
-            </ResultURL>
-            <ButtonContainer>
-              <IconButton onClick={handleCopy}>
-                <ContentCopyIcon />
-              </IconButton>
-
-              <IconButton>
+              </ResultURL>
+              <ButtonContainer>
+                <img
+                  onClick={handleCopy}
+                  src={CopyIcon}
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    cursor: "pointer",
+                  }}
+                />
                 <a
                   style={{ textDecoration: "none", color: "gray" }}
                   href={`https://twitter.com/intent/tweet?text=${ShortenURL}`}
                 >
-                  <TwitterIcon />
+                  <img
+                    src={TwitterIcon}
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                    }}
+                  />
                 </a>
-              </IconButton>
-              <LineImgContainer
-                href={`https://social-plugins.line.me/lineit/share?url=${ShortenURL}`}
-              >
-                <img
-                  src={LineImage}
-                  width="25"
-                  height="25"
-                  alt="share to Line"
-                />
-              </LineImgContainer>
-              <IconButton>
+
                 <a
                   style={{ textDecoration: "none", color: "gray" }}
                   href={`https://www.facebook.com/sharer/sharer.php?u=${ShortenURL}`}
                 >
-                  <MdFacebook size="2rem" />
+                  <img
+                    src={FBIcon}
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                    }}
+                  />
                 </a>
-              </IconButton>
-            </ButtonContainer>
-          </ResultContainer>
-        )}
-        <Snackbar
-          open={isSnackbar}
-          autoHideDuration={5000}
-          onClose={handleSnackbarClose}
-          message="The shortened URL has been copied to your clipboard"
-        />
+                <a href={`https://t.me/share/url?url=${ShortenURL}`}>
+                  <img
+                    src={TelegramIcon}
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                    }}
+                  />
+                </a>
+              </ButtonContainer>
+            </ResultContainer>
+          )}
+          <Snackbar
+            open={isSnackbar}
+            autoHideDuration={5000}
+            onClose={handleSnackbarClose}
+            message="The shortened URL has been copied to your clipboard"
+          />
+        </InnerContainer>
         <FooterContainer>
-          <Typography sx={{ fontFamily: "Roboto Mono" }}>
-            <a
-              href="https://github.com/LeeCH-OeO/short-url"
-              style={{ textDecoration: "none" }}
-            >
-              © 2022 Chi-Hsuan Lee
-            </a>
-          </Typography>
+          <a
+            href="https://github.com/LeeCH-OeO/short-url"
+            style={{ textDecoration: "none" }}
+          >
+            © 2022 Chi-Hsuan Lee
+          </a>
         </FooterContainer>
-      </div>
-    </MainContainer>
+      </MainContainer>
+    </div>
   );
 }
 
