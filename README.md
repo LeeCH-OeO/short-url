@@ -1,4 +1,4 @@
-# [Short URL](https://shorturl.chihsuan-lee.dev/)
+# [Short URL](https://short.ch-lee.xyz/)
 
 Make your URL short !
 
@@ -8,13 +8,13 @@ Make your URL short !
 
 ## dev
 
-Place your Rebrandly api in `/.env`  
 `npm start`
 
 ## API
 
-[Rebrandly](https://rebrandly.com/)  
 [Tweet button](https://developer.twitter.com/en/docs/twitter-for-websites/tweet-button/overview)
+[Telegram share](https://core.telegram.org/widgets/share)
+[Facebook share](https://developers.facebook.com/docs/plugins/share-button/)
 
 ## dependencies
 

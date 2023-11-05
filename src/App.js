@@ -18,37 +18,11 @@ import CopyIcon from "./icons/copy.svg";
 import ShareIcon from "./icons/share.svg";
 import TelegramIcon from "./icons/telegram.svg";
 import axios from "axios";
-// const ShareButton = () => {
-//   if (navigator.canShare)
-//     return (
-//       <img
-//         src={ShareIcon}
-//         onClick={async () => {
-//           try {
-//             await navigator.share({
-//               title: "Shorten by ch-lee",
-//               text: "Shorten by ch-lee",
-//               url: { ShortenURL },
-//             });
-//             console.log("Data was shared successfully");
-//           } catch (err) {
-//             console.error("Share failed:", err.message);
-//           }
-//         }}
-//         style={{
-//           width: "32px",
-//           height: "32px",
-//           cursor: "pointer",
-//         }}
-//       />
-//     );
-//   else return <></>;
-// };
+
 function App() {
   const [OriginalUrl, setOriginalUrl] = useState("");
   const [ShortenURL, setShortenURL] = useState("");
   const [Shorten, setShorten] = useState(false);
-  const [ClearButton, setClearButton] = useState(false);
   const [isSnackbar, setSnackbar] = useState(false);
   const domainUrl = "https://st.ch-lee.xyz/";
   const handleClick = async () => {
@@ -95,8 +69,6 @@ function App() {
           onClick={async () => {
             try {
               await navigator.share({
-                title: "Shorten by ch-lee",
-                text: "Shorten by ch-lee",
                 url: ShortenURL,
               });
               console.log("Data was shared successfully");
