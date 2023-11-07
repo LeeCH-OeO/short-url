@@ -62,28 +62,28 @@ function App() {
   };
 
   const ShareButton = () => {
-    if (navigator.canShare)
-      return (
-        <img
-          src={ShareIcon}
-          onClick={async () => {
-            try {
-              await navigator.share({
-                url: ShortenURL,
-              });
-              console.log("Data was shared successfully");
-            } catch (err) {
-              console.error("Share failed:", err.message);
-            }
-          }}
-          style={{
-            width: "32px",
-            height: "32px",
-            cursor: "pointer",
-          }}
-        />
-      );
-    else return <></>;
+    if (!navigator.canShare) return <></>;
+
+    return (
+      <img
+        src={ShareIcon}
+        onClick={async () => {
+          try {
+            await navigator.share({
+              url: ShortenURL,
+            });
+            console.log("Data was shared successfully");
+          } catch (err) {
+            console.error("Share failed:", err.message);
+          }
+        }}
+        style={{
+          width: "32px",
+          height: "32px",
+          cursor: "pointer",
+        }}
+      />
+    );
   };
 
   return (
