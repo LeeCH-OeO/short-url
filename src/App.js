@@ -1,4 +1,4 @@
-import { Button, IconButton, TextField, Typography } from "@mui/material";
+import { Button, TextField } from "@mui/material";
 import { useState } from "react";
 import {
   Header,
@@ -26,10 +26,16 @@ function App() {
   const [isSnackbar, setSnackbar] = useState(false);
   const domainUrl = "https://st.ch-lee.xyz/";
   const handleClick = async () => {
-    if (OriginalUrl === "") {
-      alert("請輸入");
+    // check if the url is valid with regex
+    const pattern =
+      /\b((?:https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gi;
+    const regex = new RegExp(pattern);
+    if (!regex.test(OriginalUrl)) {
+      alert("Please enter a valid URL");
+      setOriginalUrl("");
       return;
     }
+
     setShorten(false);
     FetchURL(OriginalUrl);
   };
@@ -110,6 +116,7 @@ function App() {
               label="Original URL"
               variant="standard"
               fullWidth
+              type="url"
               onChange={(e) => {
                 setOriginalUrl(e.target.value);
               }}
@@ -200,7 +207,7 @@ function App() {
             href="https://github.com/LeeCH-OeO/short-url"
             style={{ textDecoration: "none" }}
           >
-            © 2022 Chi-Hsuan Lee
+            © {new Date().getFullYear()} LeeCH-OeO
           </a>
         </FooterContainer>
       </MainContainer>
