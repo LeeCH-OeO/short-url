@@ -8,9 +8,11 @@ binding = "ASSETS"
 not_found_handling = "single-page-application"
 run_worker_first = true
 
-[[r2_buckets]]
-binding = "URLS_BUCKET"
-bucket_name = "short-url-db"
+[[d1_databases]]
+binding = "URLS_DB"
+database_name = "short-url-db"
+database_id = "578cf1c9-e8c6-4776-8164-c45ce28040e5"
+migrations_dir = "worker/migrations"
 
 [vars]
 APP_BASE_URL = "https://st.ch-lee.xyz"

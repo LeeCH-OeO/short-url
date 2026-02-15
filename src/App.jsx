@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import TwitterIcon from "./icons/twitter.svg";
 import FBIcon from "./icons/facebook.svg";
 import CopyIcon from "./icons/copy.svg";
@@ -236,6 +236,30 @@ function PublicPage() {
 }
 
 function App() {
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const currentUrl = new URL(window.location.href);
+    let hasCloudflareParams = false;
+
+    for (const param of currentUrl.searchParams.keys()) {
+      if (param.startsWith("__cf_")) {
+        hasCloudflareParams = true;
+        currentUrl.searchParams.delete(param);
+      }
+    }
+
+    if (!hasCloudflareParams) {
+      return;
+    }
+
+    const search = currentUrl.searchParams.toString();
+    const cleanUrl = `${currentUrl.pathname}${search ? `?${search}` : ""}${currentUrl.hash}`;
+    window.history.replaceState(null, "", cleanUrl);
+  }, []);
+
   const path = typeof window !== "undefined" ? window.location.pathname : "/";
 
   return (

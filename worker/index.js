@@ -29,18 +29,6 @@ function getOrigin(request, env) {
   return env.APP_BASE_URL || new URL(request.url).origin;
 }
 
-async function getUniqueShortCode(env) {
-  for (let attempt = 0; attempt < MAX_ID_RETRIES; attempt += 1) {
-    const candidate = createShortCode();
-    const existing = await env.URLS_BUCKET.head(candidate);
-    if (!existing) {
-      return candidate;
-    }
-  }
-
-  throw new Error("Failed to generate a unique short code after retries.");
-}
-
 async function shortenUrl(request, env) {
   let body = {};
   try {
@@ -69,20 +57,33 @@ async function shortenUrl(request, env) {
   }
 
   let id = "";
-  try {
-    id = await getUniqueShortCode(env);
-  } catch {
+  let stored = false;
+  for (let attempt = 0; attempt < MAX_ID_RETRIES; attempt += 1) {
+    try {
+      id = createShortCode();
+      await env.URLS_DB.prepare(
+        "INSERT INTO urls (id, destination_url) VALUES (?, ?)",
+      )
+        .bind(id, parsed.toString())
+        .run();
+      stored = true;
+      break;
+    } catch (error) {
+      if (!String(error?.message || "").includes("UNIQUE constraint failed")) {
+        return createJsonResponse(
+          { error: "Unable to store short URL. Please retry." },
+          503,
+        );
+      }
+    }
+  }
+
+  if (!stored) {
     return createJsonResponse(
       { error: "Unable to allocate a unique short URL. Please retry." },
       503,
     );
   }
-
-  await env.URLS_BUCKET.put(id, parsed.toString(), {
-    httpMetadata: {
-      contentType: "text/plain",
-    },
-  });
 
   const baseUrl = getOrigin(request, env);
 
@@ -161,12 +162,17 @@ async function redirectByCode(shortCode, request, env, ctx) {
     return cached;
   }
 
-  const object = await env.URLS_BUCKET.get(shortCode);
-  if (!object) {
+  const row = await env.URLS_DB.prepare(
+    "SELECT destination_url FROM urls WHERE id = ? LIMIT 1",
+  )
+    .bind(shortCode)
+    .first();
+
+  if (!row || typeof row.destination_url !== "string") {
     return new Response("Short URL not found", { status: 404 });
   }
 
-  const destination = (await object.text()).trim();
+  const destination = row.destination_url.trim();
   if (!destination) {
     return new Response("Short URL is invalid", { status: 500 });
   }

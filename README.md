@@ -1,12 +1,12 @@
 # Short URL
 
-React + Vite frontend with a Cloudflare Worker backend and R2 as the URL storage layer.
+React + Vite frontend with a Cloudflare Worker backend and D1 as the URL storage layer.
 
 ## Stack
 
 - Frontend: React + Vite + Tailwind CSS
 - Backend: Cloudflare Workers (`worker/index.js`)
-- Storage: Cloudflare R2 (`URLS_BUCKET` binding)
+- Storage: Cloudflare D1 (`URLS_DB` binding)
 
 ## Local development
 
@@ -46,19 +46,27 @@ If omitted, frontend uses same-origin `/api/*`.
 
 ## Cloudflare setup
 
-1. Create an R2 bucket:
+1. Create a D1 database:
 
 ```bash
-wrangler r2 bucket create short-url-db
+wrangler d1 create short-url-db
 ```
 
 2. Update `wrangler.toml` values:
 
 - `name`
-- `bucket_name`
+- `database_name`
+- `database_id`
 - `APP_BASE_URL`
 
-3. Build and deploy:
+3. Apply D1 migration (local + remote):
+
+```bash
+wrangler d1 migrations apply short-url-db --local
+wrangler d1 migrations apply short-url-db --remote
+```
+
+4. Build and deploy:
 
 ```bash
 npm run build
@@ -86,7 +94,7 @@ Response:
 
 ### `GET /:id`
 
-Redirects to the original URL stored in R2.
+Redirects to the original URL stored in D1.
 
 ## Security
 
