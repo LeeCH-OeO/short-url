@@ -92,6 +92,33 @@ Response:
 }
 ```
 
+### `GET /api/urls`
+
+Returns only URLs created by the currently authenticated user.
+
+Response:
+
+```json
+{
+  "items": [
+    {
+      "id": "a1B2c3D",
+      "shortUrl": "https://your-domain/a1B2c3D",
+      "destinationUrl": "https://example.com/page",
+      "createdAt": "2026-02-20T04:21:23.000Z",
+      "clickCount": 12,
+      "lastClickedAt": "2026-02-20T04:45:10.000Z",
+      "topCountry": "US",
+      "lastGeo": {
+        "country": "US",
+        "region": "California",
+        "city": "San Francisco"
+      }
+    }
+  ]
+}
+```
+
 ### `GET /:id`
 
 Redirects to the original URL stored in D1.
@@ -107,7 +134,10 @@ The Worker enforces rate limiting on `POST /api/short` using Cloudflare Rate Lim
 
 ### Cloudflare One (Access) sign-in required
 
-The Worker now requires Cloudflare Access authentication for all routes except `GET /api/health`.
+The Worker requires Cloudflare Access authentication for management APIs:
+
+- `POST /api/short`
+- `GET /api/urls`
 
 Required Cloudflare dashboard setup:
 
@@ -119,10 +149,11 @@ After this is enabled, requests include Access headers and the app/API will work
 
 ## Access policy paths (recommended)
 
-To keep short links public while protecting creation:
+To keep short links public while protecting management:
 
 - Protect: `st.ch-lee.xyz/create*`
 - Protect: `st.ch-lee.xyz/api/short*`
+- Protect: `st.ch-lee.xyz/api/urls*`
 - Do not protect: `st.ch-lee.xyz/*` globally
 
-This allows anyone to open `https://st.ch-lee.xyz/<id>` while only authenticated users can access the create page and create API.
+This allows anyone to open `https://st.ch-lee.xyz/<id>` while only authenticated users can access creation and their own URL list.

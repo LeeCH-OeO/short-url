@@ -1,3 +1,4 @@
+import { Hono } from "hono";
 import { customAlphabet } from "nanoid";
 
 const ID_LENGTH = 8;
@@ -6,6 +7,13 @@ const ALPHABET =
 const MAX_ID_RETRIES = 50;
 const REDIRECT_CACHE_TTL_SECONDS = 3600;
 const SHORTEN_LIMIT_PATH = "/api/short";
+const LIST_URL_LIMIT = 100;
+const EMPTY_ANALYTICS = {
+  clickCount: 0,
+  lastClickedAt: null,
+  topCountry: null,
+  lastGeo: null,
+};
 const nanoid = customAlphabet(ALPHABET, ID_LENGTH);
 
 function createJsonResponse(payload, status = 200, headers = {}) {
@@ -21,15 +29,175 @@ function createJsonResponse(payload, status = 200, headers = {}) {
   });
 }
 
-function createShortCode(length = ID_LENGTH) {
-  return nanoid(length);
-}
-
 function getOrigin(request, env) {
   return env.APP_BASE_URL || new URL(request.url).origin;
 }
 
-async function shortenUrl(request, env) {
+function normalizeString(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function parseNumber(value) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function toIsoDateFromUnixSeconds(value) {
+  const unixSeconds = parseNumber(value);
+  if (unixSeconds === null) {
+    return null;
+  }
+
+  return new Date(unixSeconds * 1000).toISOString();
+}
+
+function getGeoFromRequest(request) {
+  const cf = request.cf || {};
+
+  return {
+    country: normalizeString(cf.country),
+    region: normalizeString(cf.region),
+    city: normalizeString(cf.city),
+  };
+}
+
+async function recordClickEvent(shortCode, request, env) {
+  const geo = getGeoFromRequest(request);
+
+  try {
+    await env.URLS_DB.prepare(
+      "INSERT INTO click_events (short_id, country, region, city) VALUES (?, ?, ?, ?)",
+    )
+      .bind(shortCode, geo.country, geo.region, geo.city)
+      .run();
+  } catch {
+    // Keep redirects fast and available even if analytics storage fails.
+  }
+}
+
+async function getUrlAnalytics(env, shortIds) {
+  const analyticsByShortId = new Map();
+  if (!Array.isArray(shortIds) || shortIds.length === 0) {
+    return analyticsByShortId;
+  }
+
+  const placeholders = shortIds.map(() => "?").join(", ");
+
+  try {
+    const [countsResult, countryResult, lastGeoResult] = await Promise.all([
+      env.URLS_DB.prepare(
+        `SELECT short_id, COUNT(*) AS click_count, MAX(created_at) AS last_clicked_at
+         FROM click_events
+         WHERE short_id IN (${placeholders})
+         GROUP BY short_id`,
+      )
+        .bind(...shortIds)
+        .all(),
+      env.URLS_DB.prepare(
+        `SELECT short_id, country, COUNT(*) AS country_count
+         FROM click_events
+         WHERE short_id IN (${placeholders}) AND country IS NOT NULL AND country != ''
+         GROUP BY short_id, country
+         ORDER BY short_id ASC, country_count DESC, country ASC`,
+      )
+        .bind(...shortIds)
+        .all(),
+      env.URLS_DB.prepare(
+        `SELECT e.short_id, e.country, e.region, e.city, e.created_at, e.id
+         FROM click_events e
+         JOIN (
+           SELECT short_id, MAX(created_at) AS max_created_at
+           FROM click_events
+           WHERE short_id IN (${placeholders})
+           GROUP BY short_id
+         ) latest
+           ON latest.short_id = e.short_id AND latest.max_created_at = e.created_at
+         WHERE e.short_id IN (${placeholders})
+         ORDER BY e.short_id ASC, e.id DESC`,
+      )
+        .bind(...shortIds, ...shortIds)
+        .all(),
+    ]);
+
+    const countRows = Array.isArray(countsResult?.results)
+      ? countsResult.results
+      : [];
+    for (const row of countRows) {
+      const shortId = normalizeString(row.short_id);
+      if (!shortId) {
+        continue;
+      }
+
+      const clickCount = parseNumber(row.click_count) ?? 0;
+      const lastClickedAt = toIsoDateFromUnixSeconds(row.last_clicked_at);
+      analyticsByShortId.set(shortId, {
+        clickCount,
+        lastClickedAt,
+        topCountry: null,
+        lastGeo: null,
+      });
+    }
+
+    const countryRows = Array.isArray(countryResult?.results)
+      ? countryResult.results
+      : [];
+    for (const row of countryRows) {
+      const shortId = normalizeString(row.short_id);
+      if (!shortId) {
+        continue;
+      }
+
+      const existing = analyticsByShortId.get(shortId) || { ...EMPTY_ANALYTICS };
+      if (!existing.topCountry) {
+        existing.topCountry = normalizeString(row.country);
+      }
+      analyticsByShortId.set(shortId, existing);
+    }
+
+    const lastGeoRows = Array.isArray(lastGeoResult?.results)
+      ? lastGeoResult.results
+      : [];
+    for (const row of lastGeoRows) {
+      const shortId = normalizeString(row.short_id);
+      if (!shortId) {
+        continue;
+      }
+
+      const existing = analyticsByShortId.get(shortId) || { ...EMPTY_ANALYTICS };
+      if (existing.lastGeo) {
+        continue;
+      }
+
+      const country = normalizeString(row.country);
+      const region = normalizeString(row.region);
+      const city = normalizeString(row.city);
+      const hasGeo = country || region || city;
+      existing.lastGeo = hasGeo
+        ? {
+            country,
+            region,
+            city,
+          }
+        : null;
+      analyticsByShortId.set(shortId, existing);
+    }
+
+    return analyticsByShortId;
+  } catch {
+    return analyticsByShortId;
+  }
+}
+
+async function shortenUrl(request, env, ownerId) {
   let body = {};
   try {
     body = await request.json();
@@ -60,12 +228,15 @@ async function shortenUrl(request, env) {
   let stored = false;
   for (let attempt = 0; attempt < MAX_ID_RETRIES; attempt += 1) {
     try {
-      id = createShortCode();
-      await env.URLS_DB.prepare(
-        "INSERT INTO urls (id, destination_url) VALUES (?, ?)",
-      )
-        .bind(id, parsed.toString())
-        .run();
+      id = nanoid();
+      await env.URLS_DB.batch([
+        env.URLS_DB.prepare(
+          "INSERT INTO urls (id, destination_url) VALUES (?, ?)",
+        ).bind(id, parsed.toString()),
+        env.URLS_DB.prepare(
+          "INSERT INTO user_urls (owner_id, short_id) VALUES (?, ?)",
+        ).bind(ownerId, id),
+      ]);
       stored = true;
       break;
     } catch (error) {
@@ -106,6 +277,15 @@ function getClientIdentifier(request) {
   return `ip:${ip}`;
 }
 
+function getAuthenticatedUserId(request) {
+  const accessUser = request.headers.get("cf-access-authenticated-user-email");
+  if (!accessUser) {
+    return "";
+  }
+
+  return accessUser.trim().toLowerCase();
+}
+
 async function enforceShortenRateLimit(request, env) {
   if (!env.SHORTEN_RATE_LIMITER) {
     return null;
@@ -123,17 +303,62 @@ async function enforceShortenRateLimit(request, env) {
   );
 }
 
-function requireAccessForShorten(request) {
-  const accessJwt = request.headers.get("cf-access-jwt-assertion");
-  const accessUser = request.headers.get("cf-access-authenticated-user-email");
-  if (accessJwt || accessUser) {
+function requireAuthenticatedUser(request) {
+  const userId = getAuthenticatedUserId(request);
+  if (userId) {
     return null;
   }
 
   return createJsonResponse(
-    { error: "Authentication required to create short URLs." },
+    { error: "Authentication required. Sign in through Cloudflare Access." },
     401,
   );
+}
+
+async function listUserUrls(request, env, ownerId) {
+  const queryResult = await env.URLS_DB.prepare(
+    `SELECT u.id, u.destination_url, m.created_at
+     FROM user_urls m
+     JOIN urls u ON u.id = m.short_id
+     WHERE m.owner_id = ?
+     ORDER BY m.created_at DESC
+     LIMIT ?`,
+  )
+    .bind(ownerId, LIST_URL_LIMIT)
+    .all();
+
+  const rows = Array.isArray(queryResult?.results) ? queryResult.results : [];
+  const shortIds = rows
+    .map((row) => normalizeString(row.id))
+    .filter((shortId) => !!shortId);
+  const analyticsByShortId = await getUrlAnalytics(env, shortIds);
+
+  const baseUrl = getOrigin(request, env);
+  const items = rows
+    .map((row) => {
+      const id = normalizeString(row.id);
+      const destinationUrl = normalizeString(row.destination_url);
+      if (!id || !destinationUrl) {
+        return null;
+      }
+
+      const createdAt = toIsoDateFromUnixSeconds(row.created_at);
+      const analytics = analyticsByShortId.get(id) || { ...EMPTY_ANALYTICS };
+
+      return {
+        id,
+        destinationUrl,
+        shortUrl: `${baseUrl}/${id}`,
+        createdAt,
+        clickCount: analytics.clickCount,
+        lastClickedAt: analytics.lastClickedAt,
+        topCountry: analytics.topCountry,
+        lastGeo: analytics.lastGeo,
+      };
+    })
+    .filter(Boolean);
+
+  return createJsonResponse({ items });
 }
 
 function buildCacheKey(request) {
@@ -150,15 +375,12 @@ function buildRedirectResponse(destination) {
   });
 }
 
-function isShortCodePath(key) {
-  return new RegExp(`^[A-Za-z0-9]{${ID_LENGTH}}$`).test(key);
-}
-
 async function redirectByCode(shortCode, request, env, ctx) {
   const cache = caches.default;
   const cacheKey = buildCacheKey(request);
   const cached = await cache.match(cacheKey);
   if (cached) {
+    ctx.waitUntil(recordClickEvent(shortCode, request, env));
     return cached;
   }
 
@@ -179,48 +401,59 @@ async function redirectByCode(shortCode, request, env, ctx) {
 
   const redirectResponse = buildRedirectResponse(destination);
   ctx.waitUntil(cache.put(cacheKey, redirectResponse.clone()));
+  ctx.waitUntil(recordClickEvent(shortCode, request, env));
   return redirectResponse;
 }
 
-export default {
-  async fetch(request, env, ctx) {
-    const url = new URL(request.url);
+const app = new Hono();
 
-    if (request.method === "OPTIONS") {
-      return createJsonResponse({}, 204);
-    }
+app.options("*", (c) => createJsonResponse({}, 204));
 
-    if (url.pathname === "/api/short" && request.method === "POST") {
-      const accessResponse = requireAccessForShorten(request);
-      if (accessResponse) {
-        return accessResponse;
-      }
+app.post("/api/short", async (c) => {
+  const request = c.req.raw;
+  const env = c.env;
 
-      const rateLimitResponse = await enforceShortenRateLimit(request, env);
-      if (rateLimitResponse) {
-        return rateLimitResponse;
-      }
-      return shortenUrl(request, env);
-    }
+  const accessResponse = requireAuthenticatedUser(request);
+  if (accessResponse) {
+    return accessResponse;
+  }
 
-    if (url.pathname === "/api/health" && request.method === "GET") {
-      return createJsonResponse({ ok: true });
-    }
+  const rateLimitResponse = await enforceShortenRateLimit(request, env);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
 
-    if (request.method === "GET") {
-      const key = url.pathname.replace(/^\/+/, "");
-      if (key && !key.startsWith("api/") && isShortCodePath(key)) {
-        const redirect = await redirectByCode(key, request, env, ctx);
-        if (redirect.status === 404) {
-          return Response.redirect(`${url.origin}/create`, 302);
-        }
+  const ownerId = getAuthenticatedUserId(request);
+  return shortenUrl(request, env, ownerId);
+});
 
-        if (redirect.status !== 404) {
-          return redirect;
-        }
-      }
-    }
+app.get("/api/urls", async (c) => {
+  const request = c.req.raw;
+  const env = c.env;
 
-    return env.ASSETS.fetch(request);
-  },
-};
+  const accessResponse = requireAuthenticatedUser(request);
+  if (accessResponse) {
+    return accessResponse;
+  }
+
+  const ownerId = getAuthenticatedUserId(request);
+  return listUserUrls(request, env, ownerId);
+});
+
+app.get("/api/health", () => createJsonResponse({ ok: true }));
+
+app.get(`/:key{[A-Za-z0-9]{${ID_LENGTH}}}`, async (c) => {
+  const key = c.req.param("key");
+  const redirect = await redirectByCode(key, c.req.raw, c.env, c.executionCtx);
+
+  if (redirect.status === 404) {
+    const url = new URL(c.req.url);
+    return Response.redirect(`${url.origin}/create`, 302);
+  }
+
+  return redirect;
+});
+
+app.all("*", (c) => c.env.ASSETS.fetch(c.req.raw));
+
+export default app;

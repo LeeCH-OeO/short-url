@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import TwitterIcon from "./icons/twitter.svg";
 import FBIcon from "./icons/facebook.svg";
 import CopyIcon from "./icons/copy.svg";
@@ -16,17 +16,53 @@ function isValidHttpUrl(value) {
   }
 }
 
+function formatGeoLocation(lastGeo) {
+  if (!lastGeo || typeof lastGeo !== "object") {
+    return "";
+  }
+
+  const parts = [lastGeo.city, lastGeo.region, lastGeo.country].filter(
+    (value) => typeof value === "string" && value.trim(),
+  );
+  return parts.join(", ");
+}
+
 function CreatePage() {
   const [originalUrl, setOriginalUrl] = useState("");
   const [shortenedUrl, setShortenedUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [isCopied, setIsCopied] = useState(false);
+  const [myUrls, setMyUrls] = useState([]);
+  const [isLoadingMyUrls, setIsLoadingMyUrls] = useState(false);
 
   const canShare = useMemo(
     () => typeof navigator !== "undefined" && !!navigator.share,
     [],
   );
+
+  const loadMyUrls = useCallback(async () => {
+    setIsLoadingMyUrls(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/urls`);
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to load your URLs.");
+      }
+
+      const data = await response.json();
+      setMyUrls(Array.isArray(data.items) ? data.items : []);
+    } catch (requestError) {
+      setError(requestError.message || "Failed to load your URLs.");
+    } finally {
+      setIsLoadingMyUrls(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadMyUrls();
+  }, [loadMyUrls]);
 
   const handleShorten = async () => {
     if (!isValidHttpUrl(originalUrl)) {
@@ -55,6 +91,7 @@ function CreatePage() {
       const data = await response.json();
       setShortenedUrl(data.shortUrl);
       setOriginalUrl("");
+      await loadMyUrls();
     } catch (requestError) {
       setError(requestError.message || "Failed to shorten URL.");
     } finally {
@@ -200,6 +237,58 @@ function CreatePage() {
             )}
           </div>
         )}
+
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+          <h2 className="text-xl font-bold tracking-tight text-slate-900">
+            My URLs
+          </h2>
+
+          {isLoadingMyUrls ? (
+            <p className="mt-3 text-sm text-slate-600">Loading your URLs...</p>
+          ) : myUrls.length === 0 ? (
+            <p className="mt-3 text-sm text-slate-600">
+              You have not created any URLs yet.
+            </p>
+          ) : (
+            <ul className="mt-4 space-y-3">
+              {myUrls.map((item) => (
+                <li
+                  key={item.id}
+                  className="rounded-xl border border-slate-200 bg-white p-3"
+                >
+                  <a
+                    href={item.shortUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="break-all text-sm font-semibold text-sky-700 hover:text-sky-800"
+                  >
+                    {item.shortUrl}
+                  </a>
+                  <p className="mt-1 break-all text-sm text-slate-600">
+                    {item.destinationUrl}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-slate-500">
+                    <span>Clicks: {item.clickCount || 0}</span>
+                    {item.topCountry && <span>Top Country: {item.topCountry}</span>}
+                    {item.lastClickedAt && (
+                      <span>
+                        Last Click: {new Date(item.lastClickedAt).toLocaleString()}
+                      </span>
+                    )}
+                    {formatGeoLocation(item.lastGeo) && (
+                      <span>Last Geo: {formatGeoLocation(item.lastGeo)}</span>
+                    )}
+                  </div>
+                  {item.createdAt && (
+                    <p className="mt-1 text-xs text-slate-500">
+                      Created: {new Date(item.createdAt).toLocaleString()}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
 
       <footer className="mt-5 text-center text-sm text-slate-500">
